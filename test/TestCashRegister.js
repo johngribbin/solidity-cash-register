@@ -6,12 +6,12 @@ contract('CashRegister', async(accounts) => {
         let instance = await CashRegister.deployed();
 
         const itemName = "apple";
-        const itemPrice = 5;
+        const setPrice = 5;
 
-        await instance.addItem(itemName, itemPrice);
+        await instance.addItem(itemName, setPrice);
 
         const actualPrice = await instance.items.call(web3.sha3(itemName));
 
-        assert.equal(actualPrice, itemPrice, 'itemPrice is not the same as actualPrice');
+        assert.equal(setPrice, actualPrice, 'setPrice is not the same as actualPrice');
     })
 });
