@@ -1,6 +1,7 @@
 // to do
-// refactor tests to pull receipt ID from logs for every test 
-// and remove hardcoded receiptID of 1
+// write test to check no one other than manager can finalize a receipt
+// think about other tests
+// if test suite is done, ask mike to review
 
 const CashRegister = artifacts.require('CashRegister');
 
@@ -9,30 +10,16 @@ contract('CashRegister', async(accounts) => {
     let manager;
     let purchaser;
 
+    // ran before each test so that our tests are ran on a single instance of our contract
     before(async() => {
         instance = await CashRegister.deployed();
         manager = accounts[0];
         purchaser = accounts[1];
     });
 
-    it('Prevents someone who is not the owner from adding an item to the store', async() => {
+    it('should allow the owner to add items to the stores inventory', async() => {
         const itemName = "apple";
-        const setPrice = 5;
-        // Try adding the apple and its price to the items mapping
-        try {
-            // Sending the transaction from account 1 (not the manager)
-            await instance.addItem(itemName, setPrice, {from: purchaser });
-        } catch (err) {
-            // check the error includes the word 'revert'
-            assert(err.toString().includes('revert'));
-            return;
-        }
-        assert(false, 'item was added to the stores register by someone other than the manager');
-    })
-
-    it('Allows the owner to add items to the stores register', async() => {
-        const itemName = "apple";
-        const setPrice = 5;
+        const setPrice = 3;
         // add the apple and its price to the items mapping
         await instance.addItem(itemName, setPrice );
         // retrive the price of the apple from the items mapping
@@ -41,56 +28,68 @@ contract('CashRegister', async(accounts) => {
         assert.equal(setPrice, actualPrice, 'setPrice is not the same as actualPrice');
     })
 
+    it('should prevent someone who is not the owner from adding an item to the stores inventory', async() => {
+        const itemName = "orange";
+        const setPrice = 4;
+        // Try adding the apple and its price to the items mapping
+        try {
+            // and sending the transaction from purchasers account
+            await instance.addItem(itemName, setPrice, {from: purchaser });
+        } catch (err) {
+            // check the error includes the word 'revert'
+            assert(err.toString().includes('revert'));
+            return;
+        }
+        assert(false, 'item was added to the stores inventory by someone other than the manager');
+    })
     
-    it('Creates a new receipt that includes the purchasers address and a unique receiptID', async() => {
-        // create a new receipt using account 1
-        await instance.newReceipt(purchaser);
-        // the receiptNonce will incremented from 0 to 1, so we expect receiptID to be 1
-        const testID = 1;
-        // retrive the receipt struct from the receipts mapping
-        const receiptStruct = await instance.receipts.call(testID);
-
-        // retrieve address and receiptID from the struct
-        const purchaserAddress = receiptStruct[0].toString();
-        const receiptID = receiptStruct[1].toString();
+    it('should creates a new receipt that includes the purchasers address and a unique ID', async() => {
+        // create a store receipt and get the transaction receipt
+        const transReceipt = await instance.newReceipt(purchaser);
+        // get the receiptID from the logs, i.e. the event that is emitted
+        const receiptID = Number(transReceipt.logs[0].args._receiptID);
         
-        assert.equal(testID, receiptID, 'testId is not the same as receiptID found on receipt');
-        assert.equal(purchaser, purchaserAddress, 'account 1 address is not the same as purchaserAddress found on receipt');
+        // retrive the receipt struct from the receipts mapping
+        const receiptStruct = await instance.receipts.call(receiptID);
+        // retrieve address and receiptID from the struct
+        const purchaserAddressInStruct = receiptStruct[0].toString();
+        const receiptIDInStruct = Number(receiptStruct[1]);
+        
+        assert.equal(receiptID, receiptIDInStruct, 'testId is not the same as receiptID found on receipt');
+        assert.equal(purchaser, purchaserAddressInStruct, 'account 1 address is not the same as purchaserAddress found on receipt');
     });
-
-    
-    it('Allow the purchaser to add items to their receipt', async() => {
-        const itemName = 'apple';
+ 
+    it('should allow the purchaser to add items to their receipt', async() => {
+        const itemName = 'banana';
         const setPrice = 5;
-
         // add the apple and its price to the items mapping
         await instance.addItem(itemName, setPrice ); 
-        // create a new receipt using account 1
-        await instance.newReceipt(purchaser);
-        // the receiptNonce will incremented from 0 to 1, so we expect receiptID to be 1
-        const testID = 1;
+        // create a store receipt and get the transaction receipt
+        const transReceipt = await instance.newReceipt(purchaser);
+        // get the receiptID from the logs, i.e. the event that is emitted
+        const receiptID = Number(transReceipt.logs[0].args._receiptID);
 
-        await instance.ringUpItem(testID, itemName, { from: purchaser });
+        await instance.ringUpItem(receiptID, itemName, { from: purchaser });
 
         // retrive the receipt struct from the receipts mapping
-        const receiptStruct = await instance.receipts.call(testID);
+        const receiptStruct = await instance.receipts.call(receiptID);
         const totalPrice = receiptStruct[2].toString();
 
         assert.equal(setPrice, totalPrice, 'setPrice is not the same as totalPrice on the receipt');
     })
 
-    it('Prevents anyone other than the purchaser from adding items to their receipt', async() => {
-        const itemName = 'apple';
-        const setPrice = 5;
-        // add the apple and its price to the items mapping
+    it('should prevent anyone other than the purchaser from adding items to the purchasers receipt', async() => {
+        const itemName = 'mango';
+        const setPrice = 6;
+        // add the mango and its price to the items mapping
         await instance.addItem(itemName, setPrice ); 
-        // create a new receipt using account 1
-        await instance.newReceipt(purchaser);
-        // the receiptNonce will incremented from 0 to 1, so we expect receiptID to be 1
-        const testID = 1;
+        // create a store receipt and get the transaction receipt
+        const transReceipt = await instance.newReceipt(purchaser);
+        // get the receiptID from the logs, i.e. the event that is emitted
+        const receiptID = Number(transReceipt.logs[0].args._receiptID);
         // try sending transaction from the managers address
         try {
-            await instance.ringUpItem(testID, itemName, { from: manager });
+            await instance.ringUpItem(receiptID, itemName, { from: manager });
         } catch(err) {
             // check the error includes the word 'revert'
             assert(err.toString().includes('revert'));
@@ -99,36 +98,41 @@ contract('CashRegister', async(accounts) => {
         assert(false, 'allows the manager to add an item to the purchasers receipt');
     })
 
-    it('Allows the manager to finalize a receipt', async() => {
-        // create a receipt
-        await instance.newReceipt(purchaser);
+    it('should allows the manager to finalize a receipt', async() => {
+        // create a store receipt and get the transaction receipt
+        const transReceipt = await instance.newReceipt(purchaser);
+        // get the receiptID from the logs, i.e. the event that is emitted
+        const receiptID = Number(transReceipt.logs[0].args._receiptID);
 
-        const testID = 1;
-
-        await instance.finishReceipt(testID);
+        await instance.finishReceipt(receiptID);
 
         // retrive the receipt struct from the receipts mapping
-        const receiptStruct = await instance.receipts.call(testID);
+        const receiptStruct = await instance.receipts.call(receiptID);
 
         const finished = receiptStruct[3].toString();
 
         assert(finished, true, 'did not change finished variable to true');
     })
+    
+    /*
+    it('should prevent anyone other than the manager from finalizing a receipt', async() => {
 
-    it('Should return purchasers address and total price of a given receipt when viewReceipt is called', async() => {
-        const itemName = 'apple';
-        const setPrice = 5;
+    })
+    */
 
-        // add the apple and its price to the items mapping
+    it('should return the purchasers address and total price found on a given receipt when viewReceipt is called', async() => {
+        const itemName = 'grapefruit';
+        const setPrice = 7;
+        // add the grapefruit and its price to the items mapping
         await instance.addItem(itemName, setPrice ); 
-        // create a new receipt using account 1
+        // create a receipt
         const transReceipt = await instance.newReceipt(purchaser);
-
-        let _receiptID = transReceipt.logs[0].args._receiptID.toString();
+        // get the receiptID from the logs, i.e. the event that is emitted
+        const receiptID = Number(transReceipt.logs[0].args._receiptID);
         
-        await instance.ringUpItem(_receiptID, itemName, { from: purchaser });
+        await instance.ringUpItem(receiptID, itemName, { from: purchaser });
 
-        const returnValues = await instance.viewReceipt.call(_receiptID);
+        const returnValues = await instance.viewReceipt.call(receiptID);
 
         const [returnedTotalPrice, returnedPurchaser] = returnValues;
         
