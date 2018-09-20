@@ -1,3 +1,7 @@
+// to do
+// refactor tests to pull receipt ID from logs for every test 
+// and remove hardcoded receiptID of 1
+
 const CashRegister = artifacts.require('CashRegister');
 
 contract('CashRegister', async(accounts) => {
