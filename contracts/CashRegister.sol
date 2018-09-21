@@ -34,45 +34,44 @@ contract CashRegister {
         _;
     }
 
-    // used by owner to add items to the stores inventory which makes the items available to a purchaser
+    // Used by owner to add items to the stores inventory which will make the items available to a purchaser
     function addItem(string _itemName, uint _itemPrice) public restricted {
         // any item added must have a price more than 0, otherwise it will not be found in the items mapping
         require(_itemPrice > 0, "itemPrice must be more than 0"); 
         // adding the item to the items mapping
-        // The itemName is the key, and the itemPrice is the value returned
+        // The _itemName is the key, and the _itemPrice will be the value returned when the a
         items[keccak256(abi.encodePacked(_itemName))] = _itemPrice;
     }
 
-    // used by the owner to create a new receipt, and in the process emit a NewReceipt event
+    // Used by the owner to create a new receipt, and in the process emit a NewReceipt event
     function newReceipt(address _purchaser) public restricted {
         // create a unique receiptID for the receipt by incrementing receiptNonce by 1
         receiptNonce += 1;
-        // emit a NewReceipt event, passing in the purchaser and the incremented receiptNonce 
+        // Create new receipt by assigning values to the keys in the Receipt struct, then add the receipt to the receipts mapping by utilizing the receiptNonce
+        receipts[receiptNonce] = Receipt({ purchaser: _purchaser, receiptID: receiptNonce, totalPrice: 0, finished: false });
+        // emit a NewReceipt event by passing in the purchaser and the incremented receiptNonce (assigned to receiptID key in the event logs)
         emit NewReceipt(_purchaser, receiptNonce);
-        // create new receipt utilizing the Receipt struct
-        // add the receipt to the receipts smapping, passing the values assigned to be assigned to the variables
-        receipts[receiptNonce] = Receipt({purchaser: _purchaser, receiptID: receiptNonce, totalPrice: 0, finished: false});
     }
 
-    // used by the purchaser (receipt owner) to add items to their specifc receipt
+    // Used by the purchaser, i.e. the receipt owner, to add items to their receipt
     function ringUpItem(uint _receiptID, string _itemName) public {
-        // get the receipt (struct) by passing receiptID
+        // Get the specific receipt (struct) by passing receiptID to the receipts mapping and assign it in a storage variable named 'r'
         Receipt storage r = receipts[_receiptID];
-        // only purchaser is allowed to add items
+        // Only the purchaser is allowed to add items
         require(r.purchaser == msg.sender, "only the receipt owner can call this function");
-        // only items found in the store can be added to the receipt
+        // Only items found in the store can be added to the receipt
         require(items[keccak256(abi.encodePacked(_itemName))] != 0, "only items found in the store inventory can be added");
-        // check that the receipt is not marked as 'finished' 
+        // Only receipts not marked as 'finished' can have items items added to them
         require(r.finished == false, "only receipts that are not deemed finished can be updated");
-        // update total price by finding price of the item in items mapping 
+        // Update totalPrice variable on the receipt struct by finding the price of the item in the items mapping 
         r.totalPrice += items[keccak256(abi.encodePacked(_itemName))];
     }
 
-    // used by the owner to finalize a receipt
+    // Used by the owner to finalize a receipt
     function finishReceipt(uint _receiptID) public restricted {
-        // get the receipt the owner wants to finish
+        // Get the receipt (struct) the owner wants to finish and assign to storage variable named 'r'
         Receipt storage r = receipts[_receiptID];
-        // change 'false' to 'true' - meaning no new items can be added to this receipt
+        // Change 'finished' variable from 'false' to 'true' on the receipt struct
         r.finished = true;
     }
 
