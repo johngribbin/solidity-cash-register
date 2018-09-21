@@ -17,7 +17,7 @@ contract('CashRegister', async(accounts) => {
         const itemName = "apple";
         const setPrice = 3;
         // add the apple and its price to the items mapping
-        await instance.addItem(itemName, setPrice );
+        await instance.addItem(itemName, setPrice, { from: manager });
         // retrive the price of the apple from the items mapping
         const actualPrice = await instance.items.call(web3.sha3(itemName));
 
@@ -36,6 +36,7 @@ contract('CashRegister', async(accounts) => {
             assert(err.toString().includes('revert'));
             return;
         }
+
         assert(false, 'item was added to the stores inventory by the purchaser');
     })
     
@@ -98,7 +99,7 @@ contract('CashRegister', async(accounts) => {
         // map over all the items in the grocery list
         groceries.map(async item => {
             for(let itemName in item) {
-                // add all the grocery items to the purchaser recipt, using the purchasers address
+                // add all the grocery items to the purchasers recipt, using the purchasers address
                 await instance.ringUpItem(receiptID, itemName, { from: purchaser });
             }
         })
@@ -127,6 +128,7 @@ contract('CashRegister', async(accounts) => {
             assert(err.toString().includes('revert'));
             return;
         }
+
         assert(false, 'allows the manager to add an item to the purchasers receipt');
     })
 
@@ -158,6 +160,7 @@ contract('CashRegister', async(accounts) => {
             assert(err.toString().includes('revert'));
             return;
         }
+
        assert(false, 'allows the purchaser to finalize their own receipt');
     })
     

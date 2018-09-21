@@ -7,13 +7,13 @@ contract CashRegister {
         uint indexed _receiptID
     );
 
-    // Owner of the 'store' that operates the cash register
+    // Owner of the physical 'store' that will utilize the cash register contract
     address public owner;
-    // Receives itemName as a string and returns the price of the item as a uint
+    // mapping of items in the stores inventory which accepts itemName as a string and returns the price of the item as a uint
     mapping(bytes32 => uint) public items; 
-    // Receives receiptID as a unint and returns the specific Receipt struct
+    // mapping of individual receipts which accepts receiptID as a unint and returns the receipt of type 'struct'
     mapping(uint => Receipt) public receipts;
-    // receiptNonce is incremented and used to assign a unique receiptID to each receipt
+    // receiptNonce is incremented by newReceipt function and used to assign a unique receiptID to each receipt
     uint receiptNonce;
     // Each individual receipt takes the form of a struct
     struct Receipt {
@@ -23,7 +23,7 @@ contract CashRegister {
         bool finished;
     }
 
-    // Set the address of the 'owner' to be the person who initializes the contract
+    // Sets the value of 'owner' to be the address of the person who initializes the contract
     constructor() public {
         owner = msg.sender;
     }
@@ -34,9 +34,9 @@ contract CashRegister {
         _;
     }
 
-    // used by owner to add items to his/her store to make them available to a purchaser
+    // used by owner to add items to the stores inventory which makes the items available to a purchaser
     function addItem(string _itemName, uint _itemPrice) public restricted {
-        // any item added must have a price more than 0, otherwise it will not be found in the items mapping 
+        // any item added must have a price more than 0, otherwise it will not be found in the items mapping
         require(_itemPrice > 0, "itemPrice must be more than 0"); 
         // adding the item to the items mapping
         // The itemName is the key, and the itemPrice is the value returned
