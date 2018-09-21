@@ -4,11 +4,11 @@ contract('CashRegister', async(accounts) => {
     let instance;
     let manager;
     let purchaser;
-
-    // the tests are ran on a single instance of our contract
-    // The manager and purchaser addresses are made avilable to us in each test
+    
     before(async() => {
+        // The tests are ran on a single instance of the contract
         instance = await CashRegister.deployed();
+        // The manager and purchaser addresses are made avilable to each test
         manager = accounts[0];
         purchaser = accounts[1];
     });
@@ -16,9 +16,9 @@ contract('CashRegister', async(accounts) => {
     it('should allow the owner to add an item to the stores inventory', async() => {
         const itemName = "apple";
         const setPrice = 3;
-        // add the apple and its price to the items mapping
+        // Add the apple and its price to the items mapping, sending the transaction from the managers address
         await instance.addItem(itemName, setPrice, { from: manager });
-        // retrive the price of the apple from the items mapping
+        // Retrive the price of the apple from the items mapping
         const actualPrice = await instance.items.call(web3.sha3(itemName));
 
         assert.equal(setPrice, actualPrice, 'setPrice is not the same as actualPrice');
@@ -27,9 +27,8 @@ contract('CashRegister', async(accounts) => {
     it('should not allow someone who is not the owner to add an item to the stores inventory', async() => {
         const itemName = "orange";
         const setPrice = 4;
-        // Try adding the orange and its price to the items mapping
+        // Try adding the orange and its price to the items mapping, sending the transaction from the purchasers address
         try {
-            // and sending the transaction from purchasers account
             await instance.addItem(itemName, setPrice, {from: purchaser });
         } catch (err) {
             // check the error includes the word 'revert'
@@ -41,37 +40,41 @@ contract('CashRegister', async(accounts) => {
     })
     
     it('should creates a new receipt that includes the purchasers address and a unique ID', async() => {
-        // create a store receipt and get the transaction receipt
+        // Create a store receipt passing the purchasers address as an argumentand get the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
-        // get the receiptID from the logs, i.e. the event that is emitted
-        const receiptID = Number(transReceipt.logs[0].args._receiptID);
-        // retrive the receipt struct from the receipts mapping
-        const receiptStruct = await instance.receipts.call(receiptID);
-        // retrieve address and receiptID from the struct
+        // Get the purchaser (of type address) and receiptID (of type uint) from the logs
+        // i.e. the event that is emitted when a newReceipt is executed
+        const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
+        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
+        // Retrive the receipt (of type struct) from the receipts mapping by passing the receiptID taken from logs
+        const receiptStruct = await instance.receipts.call(receiptIDFromLogs);
+        // Retrieve purchaser (of type address) and receiptID (of type uint) from the receipt obtained from receipts mapping
         const purchaserAddressInStruct = receiptStruct[0].toString();
         const receiptIDInStruct = Number(receiptStruct[1]);
         
-        assert.equal(receiptID, receiptIDInStruct, 'receiptID taken from transaction logs is not the same as receiptID found in receipts mapping');
-        assert.equal(purchaser, purchaserAddressInStruct, 'purchaser address taken from accounts is not the same as purchaserAddress found in receipts mapping');
+        assert.equal(purchaserFromLogs, purchaserAddressInStruct, 'purchaser address taken from transaction logs is not the same as purchaser address found in receipts mapping');
+        assert.equal(receiptIDFromLogs, receiptIDInStruct, 'receiptID taken from transaction logs is not the same as receiptID found in receipts mapping');
     });
  
     it('should allow the purchaser to add an item to their receipt', async() => {
         const itemName = 'banana';
         const setPrice = 5;
-        // add the banana and its price to the items mapping
+        // Add banana and its price to the items mapping and send transaction from the managers address
         await instance.addItem(itemName, setPrice, { from: manager }); 
-        // create a store receipt and get the transaction receipt
+        // Create a store receipt and get the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
-        // get the receiptID from the logs, i.e. the event that is emitted
+        // Get the receiptID from the logs, i.e. the event that is emitted
         const receiptID = Number(transReceipt.logs[0].args._receiptID);
-        // add a banana to the purchasers receipt from the purchasers address
+        // Add ONE banana to the purchasers receipt and send the transaction from the purchasers address
         await instance.ringUpItem(receiptID, itemName, { from: purchaser });
+        // find the item price in the items mapping
+        const itemPriceInMapping = await instance.items.call(web3.sha3(itemName));
         // retrive the receipt struct from the receipts mapping
         const receiptStruct = await instance.receipts.call(receiptID);
         // find the totalPrice on the receipt
-        const totalPrice = Number(receiptStruct[2]);
+        const totalPriceOnReceipt = Number(receiptStruct[2]);
 
-        assert.equal(setPrice, totalPrice, 'setPrice variable is not the same as totalPrice variable found on the receipt');
+        assert.equal(itemPriceInMapping, totalPriceOnReceipt, 'setPrice variable is not the same as totalPrice variable found on the receipt');
     })
 
     it('should allow the purchaser to add multiple items to their receipt', async() => {
@@ -80,7 +83,7 @@ contract('CashRegister', async(accounts) => {
             { 'apple': 3 },
             { 'orange': 4 },
             { 'banana': 5 },
-            { 'mango': 6} ,
+            { 'mango': 6 } ,
             { 'grapefruit': 7 }
         ]
         // the total cost of the groceries on the shopping list
