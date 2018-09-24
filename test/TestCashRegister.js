@@ -18,7 +18,8 @@ contract('CashRegister', async(accounts) => {
         const setPrice = 3;
         // Add the apple and its price to the items mapping, sending the transaction from the managers address
         await instance.addItem(itemName, setPrice, { from: manager });
-        // Retrive the price of the apple from the items mapping (returns a value of type Big Number)
+        // Find the actual price in the items mapping by wrapping itemName in a web3 helper to convert it from type string to bytes32
+        // This returns a big number
         const actualPrice = await instance.items.call(web3.sha3(itemName));
 
         assert.strictEqual(setPrice, Number(actualPrice), 'setPrice is not the same as actualPrice');
