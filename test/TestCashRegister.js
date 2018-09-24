@@ -18,10 +18,10 @@ contract('CashRegister', async(accounts) => {
         const setPrice = 3;
         // Add the apple and its price to the items mapping, sending the transaction from the managers address
         await instance.addItem(itemName, setPrice, { from: manager });
-        // Retrive the price of the apple from the items mapping
+        // Retrive the price of the apple from the items mapping (returns a value of type Big Number)
         const actualPrice = await instance.items.call(web3.sha3(itemName));
 
-        assert.equal(setPrice, actualPrice, 'setPrice is not the same as actualPrice');
+        assert.strictEqual(setPrice, Number(actualPrice), 'setPrice is not the same as actualPrice');
     })
 
     it('should not allow someone who is not the owner to add an item to the stores inventory', async() => {
@@ -51,8 +51,8 @@ contract('CashRegister', async(accounts) => {
         const purchaserAddressInStruct = receiptStruct[0].toString();
         const receiptIDInStruct = Number(receiptStruct[1]);
         
-        assert.equal(purchaserFromLogs, purchaserAddressInStruct, 'purchaser address taken from transaction logs is not the same as purchaser address found in receipts mapping');
-        assert.equal(receiptIDFromLogs, receiptIDInStruct, 'receiptID taken from transaction logs is not the same as receiptID found in receipts mapping');
+        assert.strictEqual(purchaserFromLogs, purchaserAddressInStruct, 'purchaser address taken from transaction logs is not the same as purchaser address found in receipts mapping');
+        assert.strictEqual(receiptIDFromLogs, receiptIDInStruct, 'receiptID taken from transaction logs is not the same as receiptID found in receipts mapping');
     });
  
     it('should allow the purchaser to add an item to their receipt', async() => {
@@ -73,7 +73,7 @@ contract('CashRegister', async(accounts) => {
         // Find the totalPrice on the receipt
         const totalPriceOnReceipt = Number(receiptStruct[2]);
 
-        assert.equal(itemPriceInMapping, totalPriceOnReceipt, 'setPrice variable is not the same as totalPrice variable found on the receipt');
+        assert.strictEqual(Number(itemPriceInMapping), totalPriceOnReceipt, 'setPrice variable is not the same as totalPrice variable found on the receipt');
     })
 
     it('should allow the purchaser to add multiple items to their receipt', async() => {
@@ -110,7 +110,7 @@ contract('CashRegister', async(accounts) => {
         // Find the totalPrice on the receipt
         const totalPrice = Number(receiptStruct[2]);
 
-        assert.equal(expectedCost, totalPrice, 'the expected cost of the shopping list is not the same as the totalPrice found on the receipt');
+        assert.strictEqual(expectedCost, totalPrice, 'the expected cost of the shopping list is not the same as the totalPrice found on the receipt');
     })
 
     it('should not allow anyone other than the purchaser to add an item to the purchasers receipt', async() => {
@@ -182,7 +182,7 @@ contract('CashRegister', async(accounts) => {
         // Pull the returned values from the array
         const [returnedTotalPrice, returnedPurchaser] = returnValues;
         
-        assert.equal(returnedTotalPrice, setPrice, 'totalPrice returned from viewReceipt is not the same as setPrice');
-        assert.equal(returnedPurchaser, purchaser, 'purchaser returned from viewReceipt is not the same as purchaser');
+        assert.strictEqual(setPrice, Number(returnedTotalPrice), 'totalPrice returned from viewReceipt is not the same as setPrice');
+        assert.strictEqual(returnedPurchaser, purchaser, 'purchaser returned from viewReceipt is not the same as purchaser');
     }) 
 });
