@@ -1,6 +1,20 @@
 pragma solidity ^0.4.23;
 
+import "tokens/eip20/EIP20Interface.sol";
+
 contract CashRegister {
+
+    // ------
+    // EVENTS
+    // ------
+
+    // An event which will be emitted by the newReceipt function and contain key/value pairs named _purchaser (of type address) and _receiptID (of type uint)
+    event NewReceipt(
+        address indexed _purchaser,
+        uint indexed _receiptID
+    );
+
+
     // Owner of the physical 'store' that will utilize the cash register contract
     address public owner;
     // mapping of items in the stores inventory which receives itemName (of type 'bytes32' - as strings cannot be used as keys in a mapping) as an argument 
@@ -19,12 +33,8 @@ contract CashRegister {
         bool finished;
     }
 
-    // An event enetitled NewReceipt which will be emitted by the newReceipt function and contain key/value pairs named _purchaser (of type address) 
-    // and _receiptID (of type uint)
-    event NewReceipt(
-        address indexed _purchaser,
-        uint indexed _receiptID
-    );
+
+    EIP20Interface public token; 
 
     // Sets the value of 'owner' to the address of the person who initialized the contract
     constructor() public {
