@@ -96,18 +96,19 @@ contract('CashRegister', async(accounts) => {
         })
         // Create a store receipt and get the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
-        // Get the receiptID from the logs, i.e. the event that is emitted by the 'newReceipt' function
-        const receiptID = Number(transReceipt.logs[0].args._receiptID);
+        // Get the puchasers address receiptID from the logs, i.e. the event that is emitted by the 'newReceipt' function
+        const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
+        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
         // Map over all the items in the grocery list
         groceries.map(async item => {
             for(let itemName in item) {
                 // Add all the grocery items to the purchasers recipt, sending the transaction from the purchasers address
-                await instance.ringUpItem(receiptID, itemName, { from: purchaser });
+                await instance.ringUpItem(receiptIDFromLogs, itemName, { from: purchaserFromLogs });
             }
         })
         // Retrive the receipt struct from the receipts mapping
-        const receiptStruct = await instance.receipts.call(receiptID);
-        // Find the totalPrice on the receipt
+        const receiptStruct = await instance.receipts.call(receiptIDFromLogs);
+        // Retrieve the totalPrice from the receipt
         const totalPrice = Number(receiptStruct[2]);
 
         assert.strictEqual(expectedCost, totalPrice, 'the expected cost of the shopping list is not the same as the totalPrice found on the receipt');
@@ -138,11 +139,11 @@ contract('CashRegister', async(accounts) => {
         // Create a store receipt and get the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
         // Get the receiptID from the logs, i.e. the event that is emitted by the 'newReceipt' function
-        const receiptID = Number(transReceipt.logs[0].args._receiptID);
+        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
         // Send a transaction from the managers address to the 'finishReceipt' function 
-        await instance.finishReceipt(receiptID, { from: manager } );
+        await instance.finishReceipt(receiptIDFromLogs, { from: manager } );
         // Retrive the receipt struct from the receipts mapping
-        const receiptStruct = await instance.receipts.call(receiptID);
+        const receiptStruct = await instance.receipts.call(receiptIDFromLogs);
         // Obtain the value for the 'finished' variable on the receipt struct
         const finishedValue = receiptStruct[3].toString();
 
@@ -152,11 +153,12 @@ contract('CashRegister', async(accounts) => {
     it('should not all anyone other than the manager to finalize a receipt', async() => {
         // Create a store receipt and get the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
-        // Get the receiptID from the logs, i.e. the event that is emitted by 'newReceipt' function
-        const receiptID = Number(transReceipt.logs[0].args._receiptID);
+        // Get the purhcasers address and receiptID from the logs, i.e. the event that is emitted by 'newReceipt' function
+        const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
+        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
         try {
             // Send a transaction from the purchasers address to the 'finishReceipt' function
-            await instance.finishReceipt(receiptID, { from: purchaser } );
+            await instance.finishReceipt(receiptIDFromLogs, { from: purchaserFromLogs } );
         } catch (err) {
             // Check if the error thrown includes the word 'revert'
             assert(err.toString().includes('revert'));
@@ -173,16 +175,17 @@ contract('CashRegister', async(accounts) => {
         await instance.addItem(itemName, setPrice, { from: manager }); 
         // Create a receipt 
         const transReceipt = await instance.newReceipt(purchaser);
-        // Get the receiptID from the logs, i.e. the event that is emitted
-        const receiptID = Number(transReceipt.logs[0].args._receiptID);
+        // Get the purhcasers address and receiptID from the logs, i.e. the event that is emitted
+        const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
+        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
         // Add the grapefuit to the receipt, sending the transaction from the purchasers address
-        await instance.ringUpItem(receiptID, itemName, { from: purchaser });
+        await instance.ringUpItem(receiptIDFromLogs, itemName, { from: purchaserFromLogs });
         // Call viewReceipt and get the return values
-        const returnValues = await instance.viewReceipt.call(receiptID);
+        const returnValues = await instance.viewReceipt.call(receiptIDFromLogs);
         // Pull the returned values from the array
         const [returnedTotalPrice, returnedPurchaser] = returnValues;
         
         assert.strictEqual(setPrice, Number(returnedTotalPrice), 'totalPrice returned from viewReceipt is not the same as setPrice');
-        assert.strictEqual(returnedPurchaser, purchaser, 'purchaser returned from viewReceipt is not the same as purchaser');
+        assert.strictEqual(purchaserFromLogs, returnedPurchaser, 'purchaser returned from viewReceipt is not the same as purchaser');
     }) 
 });
