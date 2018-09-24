@@ -154,7 +154,7 @@ contract('CashRegister', async(accounts) => {
     it('should not all anyone other than the manager to finalize a receipt', async() => {
         // Create a store receipt and get the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
-        // Get the purhcasers address and receiptID from the logs, i.e. the event that is emitted by 'newReceipt' function
+        // Get the purchasers address and receiptID from the logs, i.e. the event that is emitted by 'newReceipt' function
         const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
         const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
         try {
@@ -176,17 +176,17 @@ contract('CashRegister', async(accounts) => {
         await instance.addItem(itemName, setPrice, { from: manager }); 
         // Create a receipt 
         const transReceipt = await instance.newReceipt(purchaser);
-        // Get the purhcasers address and receiptID from the logs, i.e. the event that is emitted
+        // Get the purchasers address and receiptID from the logs, i.e. the event that is emitted
         const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
         const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
         // Add the grapefuit to the receipt, sending the transaction from the purchasers address
         await instance.ringUpItem(receiptIDFromLogs, itemName, { from: purchaserFromLogs });
         // Call viewReceipt and get the return values
         const returnValues = await instance.viewReceipt.call(receiptIDFromLogs);
-        // Pull the returned values from the array
+        // Pull the returned values from the array returned from 'viewReceipt' function
         const [returnedTotalPrice, returnedPurchaser] = returnValues;
         
         assert.strictEqual(setPrice, Number(returnedTotalPrice), 'totalPrice returned from viewReceipt is not the same as setPrice');
-        assert.strictEqual(purchaserFromLogs, returnedPurchaser, 'purchaser returned from viewReceipt is not the same as purchaser');
+        assert.strictEqual(purchaserFromLogs, returnedPurchaser, 'purchaser address returned from viewReceipt is not the same as purchaser address found in logs');
     }) 
 });
