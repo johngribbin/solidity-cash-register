@@ -136,39 +136,6 @@ contract('CashRegister', async(accounts) => {
         assert(false, 'allows the manager to add an item to the purchasers receipt');
     })
 
-    it('should allow the manager to finalize a receipt', async() => {
-        // Create a store receipt and get the transaction receipt
-        const transReceipt = await instance.newReceipt(purchaser);
-        // Get the receiptID from the logs, i.e. the event that is emitted by the 'newReceipt' function
-        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
-        // Send a transaction from the managers address to the 'finishReceipt' function 
-        await instance.finishReceipt(receiptIDFromLogs, { from: manager } );
-        // Retrive the receipt struct from the receipts mapping
-        const receiptStruct = await instance.receipts.call(receiptIDFromLogs);
-        // Obtain the value for the 'finished' variable on the receipt struct
-        const finishedValue = receiptStruct[3].toString();
-
-        assert(finishedValue, true, 'did not allow the manager to finalize a receipt');
-    })
-    
-    it('should not all anyone other than the manager to finalize a receipt', async() => {
-        // Create a store receipt and get the transaction receipt
-        const transReceipt = await instance.newReceipt(purchaser);
-        // Get the purchasers address and receiptID from the logs, i.e. the event that is emitted by 'newReceipt' function
-        const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
-        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
-        try {
-            // Send a transaction from the purchasers address to the 'finishReceipt' function
-            await instance.finishReceipt(receiptIDFromLogs, { from: purchaserFromLogs } );
-        } catch (err) {
-            // Check if the error thrown includes the word 'revert'
-            assert(err.toString().includes('revert'));
-            return;
-        }
-
-        assert(false, 'allows the purchaser to finalize their own receipt');
-    })
-    
     it('should return the purchasers address and total price found on a given receipt when viewReceipt is called', async() => {
         const itemName = 'grapefruit';
         const setPrice = 7;
@@ -189,4 +156,46 @@ contract('CashRegister', async(accounts) => {
         assert.strictEqual(setPrice, Number(returnedTotalPrice), 'totalPrice returned from viewReceipt is not the same as setPrice');
         assert.strictEqual(purchaserFromLogs, returnedPurchaser, 'purchaser address returned from viewReceipt is not the same as purchaser address found in logs');
     }) 
+
+    it('should allow the manager to finalize a receipt', async() => {
+        // Create a store receipt and get the transaction receipt
+        const transReceipt = await instance.newReceipt(purchaser);
+        // Get the receiptID from the logs, i.e. the event that is emitted by the 'newReceipt' function
+        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
+        // Send a transaction from the managers address to the 'finishReceipt' function 
+        await instance.finishReceipt(receiptIDFromLogs, { from: manager } );
+        // Retrive the receipt struct from the receipts mapping
+        const receiptStruct = await instance.receipts.call(receiptIDFromLogs);
+        // Obtain the value for the 'finished' variable on the receipt struct
+        const finishedValue = receiptStruct[3].toString();
+
+        assert(finishedValue, true, 'did not allow the manager to finalize a receipt');
+    })
+    
+    it('should not allow anyone other than the manager to finalize a receipt', async() => {
+        // Create a store receipt and get the transaction receipt
+        const transReceipt = await instance.newReceipt(purchaser);
+        // Get the purchasers address and receiptID from the logs, i.e. the event that is emitted by 'newReceipt' function
+        const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
+        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
+        try {
+            // Send a transaction from the purchasers address to the 'finishReceipt' function
+            await instance.finishReceipt(receiptIDFromLogs, { from: purchaserFromLogs } );
+        } catch (err) {
+            // Check if the error thrown includes the word 'revert'
+            assert(err.toString().includes('revert'));
+            return;
+        }
+
+        assert(false, 'allows the purchaser to finalize their own receipt');
+    })
+
+    it('should transfer tokens from the purchasers address to the contract address when the manager finalizes a receipt', async() => {
+
+    })
+
+    it('should allow the manager to claim all tokens found in the CashRegister contract address', async() => {
+
+    })
+
 });

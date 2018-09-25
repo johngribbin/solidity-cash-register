@@ -1,6 +1,6 @@
 pragma solidity ^0.4.23;
 
-import "../installed_contracts/tokens/contracts//eip20/EIP20Interface.sol";
+import "./EIP20Interface.sol"; 
 
 contract CashRegister {
 
@@ -13,7 +13,6 @@ contract CashRegister {
         address indexed _purchaser,
         uint indexed _receiptID
     );
-
 
     // Owner of the physical 'store' that will utilize the cash register contract
     address public owner;
@@ -36,9 +35,11 @@ contract CashRegister {
     // Global variable 'token'
     EIP20Interface public token; 
 
-    // Sets the value of 'owner' to the address of the person who initialized the contract
-    constructor() public {
+    constructor(address _token) public {
+        // Sets the value of 'owner' to the address of the person who initialized the contract
         owner = msg.sender;
+        // pass the deployed address of gribcash token to EIP20Interface
+        token = EIP20Interface(_token);
     }
 
     // When 'restricted' modifier is added to a contract function - the function can only be called by the manager
@@ -82,19 +83,27 @@ contract CashRegister {
         r.totalPrice += items[keccak256(abi.encodePacked(_itemName))];
     }
 
-    // Used by the owner to finalize a receipt
-    function finishReceipt(uint _receiptID) public restricted {
-        // Get the receipt (of type struct) the owner wishes to finalize and assign it to a storage variable named 'r' 
-        Receipt storage r = receipts[_receiptID];
-        // Change the value of the 'finished' key from 'false' to 'true' on the receipt
-        r.finished = true;
-    }
-
     // A read only public function that returns the total price of all items rung up in a given receipt, and the purchasers address
     function viewReceipt(uint _receiptID) public view returns (uint totalPrice, address purchaser) {
         // Get the specific receipt (of type struct) by passing _receiptID to the receipts mapping and then assign the receipt to a storage variable named 'r'
         Receipt storage r = receipts[_receiptID];
         // Return the totalPrice rung up on the receipt and the purchasers address 
         return (r.totalPrice, r.purchaser);
+    }
+
+    // Used by the owner to finalize a receipt
+    function finishReceipt(uint _receiptID) public restricted {
+        // Get the receipt (of type struct) the owner wishes to finalize and assign it to a storage variable named 'r' 
+        Receipt storage r = receipts[_receiptID];
+        // Transfers tokens from receipt owner to CashRegister contract
+        require(token.transferFrom(r.purchaser, this, r.totalPrice), "transfer from receipt owner to CashRegister contract did not complete");
+        // Change the value of the 'finished' key from 'false' to 'true' on the receipt
+        r.finished = true;
+    }
+
+    // Used by the owner to claim tokens 
+    function claimTokens() public restricted {
+        // transfer full balance of tokens in CashRegister contract to managers address 
+        token.transferFrom(this, owner, token.balanceOf(this));
     }
 }
