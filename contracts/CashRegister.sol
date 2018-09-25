@@ -1,6 +1,6 @@
 pragma solidity ^0.4.23;
 
-import "tokens/eip20/EIP20Interface.sol";
+import "../installed_contracts/tokens/contracts//eip20/EIP20Interface.sol";
 
 contract CashRegister {
 
@@ -33,7 +33,7 @@ contract CashRegister {
         bool finished;
     }
 
-
+    // Global variable 'token'
     EIP20Interface public token; 
 
     // Sets the value of 'owner' to the address of the person who initialized the contract
