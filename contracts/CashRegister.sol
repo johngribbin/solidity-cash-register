@@ -81,6 +81,7 @@ contract CashRegister {
         require(r.finished == false, "only receipts that are not deemed to be finished can be updated");
         // Update the value of the totalPrice key on the receipt by pulling the price of the item from the items mapping 
         r.totalPrice += items[keccak256(abi.encodePacked(_itemName))];
+        // EMIT AN EVENT WITH THE ITEM DETAILS - THE RECEIPT ID, THE ITEM NAME, THE PURCHASER ETC
     }
 
     // A read only public function that returns the total price of all items rung up in a given receipt, and the purchasers address
@@ -101,9 +102,13 @@ contract CashRegister {
         r.finished = true;
     }
 
+    // Used by the owner to view the token balance of the Cash Register
+    function viewContractBalance() public view restricted returns (uint totalBalance) {
+        return token.balanceOf(this);
+    }
     // Used by the owner to claim tokens 
     function claimTokens() public restricted {
         // transfer full balance of tokens in CashRegister contract to managers address 
-        token.transferFrom(this, owner, token.balanceOf(this));
+        require(token.transferFrom(this, owner, token.balanceOf(this)), "full token balance of contract did not transfer to owner");
     }
-}
+} 

@@ -1,16 +1,33 @@
 const CashRegister = artifacts.require('CashRegister');
+const Token = artifacts.require('EIP20');
+//import convertToGribCash from '../helpers/gribCashConverter';
 
 contract('CashRegister', async(accounts) => {
     let instance;
     let manager;
     let purchaser;
+    let token;
     
     before(async() => {
         // The tests are ran on a single instance of the contract
         instance = await CashRegister.deployed();
+
+        token = await Token.deployed();
+
         // The manager and purchaser addresses are made avilable to each test
         manager = accounts[0];
         purchaser = accounts[1];
+
+        // const managerTokens = await token.balanceOf.call(manager);
+        // console.log(managerTokens);
+
+        // bankroll the purchaser with 10k of gribcash
+        await token.transfer(purchaser, 10000, { from: manager })
+
+        // approve the contract to take tokens from the manager 
+        await token.approve(instance.address, 1000000000, { from: manager });
+        // approve the contract to take tokens from the purchaser
+        await token.approve(instance.address, 1000000000, { from: purchaser });
     });
 
     it('should allow the owner to add an item to the stores inventory', async() => {
@@ -190,11 +207,45 @@ contract('CashRegister', async(accounts) => {
         assert(false, 'allows the purchaser to finalize their own receipt');
     })
 
-    it('should transfer tokens from the purchasers address to the contract address when the manager finalizes a receipt', async() => {
+    it('should transfer tokens from the purchaser to the contract when the manager finalizes a receipt', async() => {
+        const itemName = 'watermelon';
+        const setPrice = 8;
+        // add the grapefruit and its price to the items mapping
+        await instance.addItem(itemName, setPrice, { from: manager }); 
+        // Create a receipt 
+        const transReceipt = await instance.newReceipt(purchaser);
+        // Get the purchasers address and receiptID from the logs, i.e. the event that is emitted
+        const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
+        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
+        // Add the grapefuit to the receipt, sending the transaction from the purchasers address
+        await instance.ringUpItem(receiptIDFromLogs, itemName, { from: purchaserFromLogs });
+        // Get purchasers token balance before receipt is finalized
+        const purchaserBalanceBeforeTransfer = await token.balanceOf.call(purchaser); 
+        // Get contracts token balance before receipt is finalized
+        const contractBalanceBeforeTransfer = await instance.viewContractBalance.call(); 
+        // Send a transaction from the managers address to the 'finishReceipt' function 
+        await instance.finishReceipt(receiptIDFromLogs, { from: manager } );
+        // Get purchasers token balance after receipt is finalized
+        const purchaserBalanceAfterTransfer = await token.balanceOf.call(purchaser);
+        // Get contracts token balance after receipt is finalized
+        const contractBalanceAfterTransfer = await instance.viewContractBalance.call();
 
+        assert.strictEqual(Number(purchaserBalanceBeforeTransfer) - Number(purchaserBalanceAfterTransfer), 
+                           Number(contractBalanceBeforeTransfer) + Number(contractBalanceAfterTransfer), 
+                           "the number of tokens debited from from the purchaser is not the same as the number of tokens transferred to the contract");
     })
 
-    it('should allow the manager to claim all tokens found in the CashRegister contract address', async() => {
+    it('should allow the manager to view token balance of CashRegister', async() => {
+        const totalTokens = await instance.viewContractBalance.call();
+
+        //console.log(totalTokens);
+    })
+
+    it('should allow the manager to claim all tokens in the CashRegister', async() => {
+        
+    })
+
+    it('should not allow anyone other than the manager to claim all tokens in the CashRegister', async() => {
 
     })
 
