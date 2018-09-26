@@ -103,7 +103,7 @@ contract CashRegister {
     }
 
     // Used by the owner to view the token balance of the Cash Register
-    function viewContractBalance() public view restricted returns (uint totalBalance) {
+    function viewContractBalance() public view restricted returns (uint tokenBalanceOfContract) {
         return token.balanceOf(this);
     }
     // Used by the owner to claim tokens 

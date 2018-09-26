@@ -1,6 +1,5 @@
 const CashRegister = artifacts.require('CashRegister');
 const Token = artifacts.require('EIP20');
-//import convertToGribCash from '../helpers/gribCashConverter';
 
 contract('CashRegister', async(accounts) => {
     let instance;
@@ -18,16 +17,14 @@ contract('CashRegister', async(accounts) => {
         manager = accounts[0];
         purchaser = accounts[1];
 
-        // const managerTokens = await token.balanceOf.call(manager);
-        // console.log(managerTokens);
-
-        // bankroll the purchaser with 10k of gribcash
+        // Bankroll the purchaser with 10k of gribcash
         await token.transfer(purchaser, 10000, { from: manager })
-
-        // approve the contract to take tokens from the manager 
+        // approve the contract to debit tokens from the manager 
         await token.approve(instance.address, 1000000000, { from: manager });
-        // approve the contract to take tokens from the purchaser
+        // approve the contract to debit tokens from the purchaser
         await token.approve(instance.address, 1000000000, { from: purchaser });
+        // approve the manager to debit tokens from the contract
+        // await token.approve(manager, 1000000000, { from: instance.address });
     });
 
     it('should allow the owner to add an item to the stores inventory', async() => {
@@ -39,7 +36,7 @@ contract('CashRegister', async(accounts) => {
         // This returns a big number
         const actualPrice = await instance.items.call(web3.sha3(itemName));
 
-        assert.strictEqual(setPrice, Number(actualPrice), 'setPrice is not the same as actualPrice');
+        assert.strictEqual(setPrice, actualPrice.toNumber(), 'setPrice is not the same as actualPrice');
     })
 
     it('should not allow someone who is not the owner to add an item to the stores inventory', async() => {
@@ -62,12 +59,12 @@ contract('CashRegister', async(accounts) => {
         const transReceipt = await instance.newReceipt(purchaser);
         // Get the purchaser (of type address) and receiptID (of type uint) from the event logs
         const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
-        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
+        const receiptIDFromLogs = transReceipt.logs[0].args._receiptID.toNumber()
         // Retrive the receipt (of type struct) from the receipts mapping by passing the receiptID taken from logs
         const receiptStruct = await instance.receipts.call(receiptIDFromLogs);
         // Retrieve purchaser (of type address) and receiptID (of type uint) from the receipt struct obtained from receipts mapping
         const purchaserAddressInStruct = receiptStruct[0].toString();
-        const receiptIDInStruct = Number(receiptStruct[1]);
+        const receiptIDInStruct = receiptStruct[1].toNumber();
         
         assert.strictEqual(purchaserFromLogs, purchaserAddressInStruct, 'purchaser address taken from transaction logs is not the same as purchaser address found in receipts mapping');
         assert.strictEqual(receiptIDFromLogs, receiptIDInStruct, 'receiptID taken from transaction logs is not the same as receiptID found in receipts mapping');
@@ -81,7 +78,7 @@ contract('CashRegister', async(accounts) => {
         // Create a store receipt and assign the transaction receipt to 'transReceipt'
         const transReceipt = await instance.newReceipt(purchaser);
         // Get the receiptID from the logs, i.e. the event that is emitted by the 'newReceipt' function
-        const receiptID = Number(transReceipt.logs[0].args._receiptID);
+        const receiptID = transReceipt.logs[0].args._receiptID.toNumber();
         // Add ONE banana to the purchasers receipt and send the transaction from the purchasers address
         await instance.ringUpItem(receiptID, itemName, { from: purchaser });
         // Find the item price in the items mapping by wrapping itemName in a web3 helper to convert it from type string to bytes32
@@ -89,9 +86,9 @@ contract('CashRegister', async(accounts) => {
         // Retrive the receipt struct from the receipts mapping
         const receiptStruct = await instance.receipts.call(receiptID);
         // Find the totalPrice on the receipt
-        const totalPriceOnReceipt = Number(receiptStruct[2]);
+        const totalPriceOnReceipt = receiptStruct[2].toNumber();
 
-        assert.strictEqual(Number(itemPriceInMapping), totalPriceOnReceipt, 'setPrice variable is not the same as totalPrice variable found on the receipt');
+        assert.strictEqual(itemPriceInMapping.toNumber(), totalPriceOnReceipt, 'setPrice variable is not the same as totalPrice variable found on the receipt');
     })
 
     it('should allow the purchaser to add multiple items to their receipt', async() => {
@@ -116,7 +113,7 @@ contract('CashRegister', async(accounts) => {
         const transReceipt = await instance.newReceipt(purchaser);
         // Get the puchasers address receiptID from the logs, i.e. the event that is emitted by the 'newReceipt' function
         const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
-        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
+        const receiptIDFromLogs = transReceipt.logs[0].args._receiptID.toNumber();
         // Map over all the items in the grocery list
         groceries.map(async item => {
             for(let itemName in item) {
@@ -127,7 +124,7 @@ contract('CashRegister', async(accounts) => {
         // Retrive the receipt struct from the receipts mapping
         const receiptStruct = await instance.receipts.call(receiptIDFromLogs);
         // Retrieve the totalPrice from the receipt
-        const totalPrice = Number(receiptStruct[2]);
+        const totalPrice = receiptStruct[2].toNumber();
 
         assert.strictEqual(expectedCost, totalPrice, 'the expected cost of the shopping list is not the same as the totalPrice found on the receipt');
     })
@@ -140,7 +137,7 @@ contract('CashRegister', async(accounts) => {
         // create a store receipt and get the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
         // Get the receiptID from the logs, i.e. the event that is emitted by the 'newReceipt' function
-        const receiptID = Number(transReceipt.logs[0].args._receiptID);
+        const receiptID = transReceipt.logs[0].args._receiptID.toNumber();
         // Try add an item to the receipt and send the transaction from the managers address
         try {
             await instance.ringUpItem(receiptID, itemName, { from: manager });
@@ -162,7 +159,7 @@ contract('CashRegister', async(accounts) => {
         const transReceipt = await instance.newReceipt(purchaser);
         // Get the purchasers address and receiptID from the logs, i.e. the event that is emitted
         const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
-        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
+        const receiptIDFromLogs = transReceipt.logs[0].args._receiptID.toNumber();
         // Add the grapefuit to the receipt, sending the transaction from the purchasers address
         await instance.ringUpItem(receiptIDFromLogs, itemName, { from: purchaserFromLogs });
         // Call viewReceipt and get the return values
@@ -170,7 +167,7 @@ contract('CashRegister', async(accounts) => {
         // Pull the returned values from the array returned from 'viewReceipt' function
         const [returnedTotalPrice, returnedPurchaser] = returnValues;
         
-        assert.strictEqual(setPrice, Number(returnedTotalPrice), 'totalPrice returned from viewReceipt is not the same as setPrice');
+        assert.strictEqual(setPrice, returnedTotalPrice.toNumber(), 'totalPrice returned from viewReceipt is not the same as setPrice');
         assert.strictEqual(purchaserFromLogs, returnedPurchaser, 'purchaser address returned from viewReceipt is not the same as purchaser address found in logs');
     }) 
 
@@ -178,7 +175,7 @@ contract('CashRegister', async(accounts) => {
         // Create a store receipt and get the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
         // Get the receiptID from the logs, i.e. the event that is emitted by the 'newReceipt' function
-        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
+        const receiptIDFromLogs = transReceipt.logs[0].args._receiptID.toNumber();
         // Send a transaction from the managers address to the 'finishReceipt' function 
         await instance.finishReceipt(receiptIDFromLogs, { from: manager } );
         // Retrive the receipt struct from the receipts mapping
@@ -194,7 +191,8 @@ contract('CashRegister', async(accounts) => {
         const transReceipt = await instance.newReceipt(purchaser);
         // Get the purchasers address and receiptID from the logs, i.e. the event that is emitted by 'newReceipt' function
         const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
-        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
+        const receiptIDFromLogs = transReceipt.logs[0].args._receiptID.toNumber();
+
         try {
             // Send a transaction from the purchasers address to the 'finishReceipt' function
             await instance.finishReceipt(receiptIDFromLogs, { from: purchaserFromLogs } );
@@ -207,46 +205,98 @@ contract('CashRegister', async(accounts) => {
         assert(false, 'allows the purchaser to finalize their own receipt');
     })
 
-    it('should transfer tokens from the purchaser to the contract when the manager finalizes a receipt', async() => {
+    it('should debit tokens from the purchaser and credit them to the contract when the manager finalizes a receipt', async() => {
         const itemName = 'watermelon';
         const setPrice = 8;
-        // add the grapefruit and its price to the items mapping
+        // Add the watermelon and its price to the items mapping
         await instance.addItem(itemName, setPrice, { from: manager }); 
-        // Create a receipt 
+        // Create a store receipt and get the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
-        // Get the purchasers address and receiptID from the logs, i.e. the event that is emitted
+        // Get the purchasers address and receiptID from the logs, i.e. the event that is emitted by 'newRecipt'
         const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
-        const receiptIDFromLogs = Number(transReceipt.logs[0].args._receiptID);
+        const receiptIDFromLogs = transReceipt.logs[0].args._receiptID.toNumber()
         // Add the grapefuit to the receipt, sending the transaction from the purchasers address
         await instance.ringUpItem(receiptIDFromLogs, itemName, { from: purchaserFromLogs });
         // Get purchasers token balance before receipt is finalized
         const purchaserBalanceBeforeTransfer = await token.balanceOf.call(purchaser); 
         // Get contracts token balance before receipt is finalized
-        const contractBalanceBeforeTransfer = await instance.viewContractBalance.call(); 
-        // Send a transaction from the managers address to the 'finishReceipt' function 
-        await instance.finishReceipt(receiptIDFromLogs, { from: manager } );
+        const contractBalanceBeforeTransfer = await instance.viewContractBalance.call({ from: manager }); 
+        // Finalize receipt using managers address to transfer receipt total in tokens from purchaser to the contract
+        await instance.finishReceipt(receiptIDFromLogs, { from: manager });
         // Get purchasers token balance after receipt is finalized
         const purchaserBalanceAfterTransfer = await token.balanceOf.call(purchaser);
         // Get contracts token balance after receipt is finalized
-        const contractBalanceAfterTransfer = await instance.viewContractBalance.call();
-
-        assert.strictEqual(Number(purchaserBalanceBeforeTransfer) - Number(purchaserBalanceAfterTransfer), 
-                           Number(contractBalanceBeforeTransfer) + Number(contractBalanceAfterTransfer), 
-                           "the number of tokens debited from from the purchaser is not the same as the number of tokens transferred to the contract");
-    })
-
-    it('should allow the manager to view token balance of CashRegister', async() => {
-        const totalTokens = await instance.viewContractBalance.call();
-
-        //console.log(totalTokens);
-    })
-
-    it('should allow the manager to claim all tokens in the CashRegister', async() => {
+        const contractBalanceAfterTransfer = await instance.viewContractBalance.call({ from: manager });
+        // Calculate amount of tokens debited from the purchaser
+        const tokensDebitedFromPurchaser = purchaserBalanceBeforeTransfer.toNumber() - purchaserBalanceAfterTransfer.toNumber();
+        // Calculate amount of tokens credited to the Contract
+        const tokensCreditedToContract = contractBalanceBeforeTransfer.toNumber() + contractBalanceAfterTransfer.toNumber();
         
+        assert.strictEqual(tokensDebitedFromPurchaser, tokensCreditedToContract, "number of tokens debited from from the purchaser is not the same as the number of tokens credited to the contract");
     })
 
-    it('should not allow anyone other than the manager to claim all tokens in the CashRegister', async() => {
-
+    it('should not allow anyone other than the manager to view the token balance of CashRegister', async() => {
+        try {
+            // call 'viewContractBalance' function from the purchasers addresss
+            await instance.viewContractBalance.call({ from: purchaser });
+        } catch (err) {
+            // Check if the error thrown includes the word 'revert'
+            assert(err.toString().includes('revert'));
+            return;
+        }
+        
+        assert(false, 'allows the purchaser to view the token balance of the contract');
     })
+
+    
+    it('should allow the manager to claim all tokens in the CashRegister', async() => {
+        const itemName = 'jackfruit';
+        const setPrice = 9;
+        // Add the jackfruit and its price to the items mapping
+        await instance.addItem(itemName, setPrice, { from: manager }); 
+        // Create a store receipt and get the transaction receipt
+        const transReceipt = await instance.newReceipt(purchaser);
+        // Get the purchasers address and receiptID from the logs, i.e. the event that is emitted by 'newRecipt'
+        const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
+        const receiptIDFromLogs = transReceipt.logs[0].args._receiptID.toNumber()
+        // Add the jackfruit to the receipt, sending the transaction from the purchasers address
+        await instance.ringUpItem(receiptIDFromLogs, itemName, { from: purchaserFromLogs });
+        // Finalize receipt using managers address to transfer receipt total in tokens from purchaser to the contract
+        await instance.finishReceipt(receiptIDFromLogs, { from: manager } );
+        // Get contracts token balance before token transfer from contract to manager
+        const contractBalanceBeforeTransfer = await instance.viewContractBalance.call({from: manager }); 
+        // Get the managers token balance before token transfer from contract to manager
+        const managerBalanceBeforeTransfer = await token.balanceOf.call(manager);
+        // Transfer token balance of contract to manager
+        await instance.claimTokens({ from: manager })
+        // Get contract token balance after token transfer from contract to manager
+        const contractBalanceAfterTransfer = await instance.viewContractBalance.call({from: manager });
+        // Get managers token balance after token transfer from contract to manager
+        const managerBalanceAfterTransfer = await token.balanceOf.call(manager);
+        // Calculate amount of tokens debited from the contract
+        const tokensDebitedFromContract = contractBalanceBeforeTransfer.toNumber() - contractBalanceAfterTransfer.toNumber();
+        // Calculate amount of tokens credited to the manager
+        const tokensCreditedToManager = managerBalanceBeforeTransfer.toNumber() + managerBalanceAfterTransfer.toNumber();
+
+        console.log(tokensDebitedFromContract);
+
+        console.log(tokensCreditedToManager);
+
+        assert.strictEqual(tokensDebitedFromContract, tokensCreditedToManager, 'number of tokens debited from the contract is not the same as number of tokens credited to the manager')
+    })
+    
+    it('should not allow anyone other than the manager to debit tokens from the CashRegister to the manager', async() => {
+        try {
+            // send transaction to claimTokens from the purchasers address
+            await instance.claimTokens({ from: purchaser });
+        } catch (err) {
+            // Check if the error thrown includes the word 'revert'
+            assert(err.toString().includes('revert'));
+            return;
+        }
+
+        assert(false, 'allows the purchaser to debit tokens from the contract to the manager')
+    })
+    
 
 });
