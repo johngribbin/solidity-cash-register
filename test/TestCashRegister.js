@@ -23,20 +23,19 @@ contract('CashRegister', async(accounts) => {
         await token.approve(instance.address, 1000000000, { from: manager });
         // approve the contract to debit tokens from the purchaser
         await token.approve(instance.address, 1000000000, { from: purchaser });
-        // approve the manager to debit tokens from the contract
-        // await token.approve(manager, 1000000000, { from: instance.address });
     });
 
     it('should allow the owner to add an item to the stores inventory', async() => {
         const itemName = "apple";
-        const setPrice = 3;
+        const setPrice = "3";
+        // consider using cashregister as camel case instead of instance
         // Add the apple and its price to the items mapping, sending the transaction from the managers address
         await instance.addItem(itemName, setPrice, { from: manager });
         // Find the actual price in the items mapping by wrapping itemName in a web3 helper to convert it from type string to bytes32
         // This returns a big number
         const actualPrice = await instance.items.call(web3.sha3(itemName));
 
-        assert.strictEqual(setPrice, actualPrice.toNumber(), 'setPrice is not the same as actualPrice');
+        assert.strictEqual(setPrice, actualPrice.toString(), 'setPrice is not the same as actualPrice');
     })
 
     it('should not allow someone who is not the owner to add an item to the stores inventory', async() => {
@@ -54,7 +53,7 @@ contract('CashRegister', async(accounts) => {
         assert(false, 'item was added to the stores inventory by the purchaser');
     })
     
-    it('should creates a new receipt that includes the purchasers address and a unique ID', async() => {
+    it('should create a new receipt that includes the purchasers address and a unique ID', async() => {
         // Create a store receipt by passing the purchasers address as an argument to the newReceipt function to obtain the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
         // Get the purchaser (of type address) and receiptID (of type uint) from the event logs
@@ -93,34 +92,26 @@ contract('CashRegister', async(accounts) => {
 
     it('should allow the purchaser to add multiple items to their receipt', async() => {
         // A shopping list of 5 items
-        const groceries = [
-            { 'apple': 3 },
-            { 'orange': 4 },
-            { 'banana': 5 },
-            { 'mango': 6 } ,
-            { 'grapefruit': 7 }
-        ]
+        const groceries = {
+            'apple': 3,
+            'orange': 4,
+            'banana': 5,
+            'mango': 6,
+            'grapefruit': 7
+        }
         // The total cost of the groceries on the shopping list
         const expectedCost = 25;
-        // Map over all the items in grocery list
-        groceries.map(async item => {
-            for(let itemName in item) {
-                // Add all the grocery items to the items mapping, sending the transactions from the managers address
-                await instance.addItem(itemName, item[itemName], { from: manager }); 
-            }
-        })
+        // Map over all the items in grocery list, Add all the grocery items to the items mapping, sending the transactions from the managers address
+        await Promise.all(Object.keys(groceries).map(itemName => instance.addItem(itemName, groceries[itemName], { from: manager })));
         // Create a store receipt and get the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
         // Get the puchasers address receiptID from the logs, i.e. the event that is emitted by the 'newReceipt' function
         const purchaserFromLogs = transReceipt.logs[0].args._purchaser.toString();
         const receiptIDFromLogs = transReceipt.logs[0].args._receiptID.toNumber();
         // Map over all the items in the grocery list
-        groceries.map(async item => {
-            for(let itemName in item) {
-                // Add all the grocery items to the purchasers recipt, sending the transaction from the purchasers address
-                await instance.ringUpItem(receiptIDFromLogs, itemName, { from: purchaserFromLogs });
-            }
-        })
+        // Add all the grocery items to the purchasers recipt, sending the transaction from the purchasers address
+        await Promise.all(Object.keys(groceries).map(itemName => instance.ringUpItem(receiptIDFromLogs, itemName, { from: purchaserFromLogs })));
+
         // Retrive the receipt struct from the receipts mapping
         const receiptStruct = await instance.receipts.call(receiptIDFromLogs);
         // Retrieve the totalPrice from the receipt
@@ -132,7 +123,7 @@ contract('CashRegister', async(accounts) => {
     it('should not allow anyone other than the purchaser to add an item to the purchasers receipt', async() => {
         const itemName = 'mango';
         const setPrice = 6;
-        // add the mango and its price to the items mapping
+        // add the mango and its price to the items mapping - the stoes inventory
         await instance.addItem(itemName, setPrice ); 
         // create a store receipt and get the transaction receipt
         const transReceipt = await instance.newReceipt(purchaser);
@@ -250,8 +241,8 @@ contract('CashRegister', async(accounts) => {
 
     
     it('should allow the manager to claim all tokens in the CashRegister', async() => {
-        const itemName = 'jackfruit';
-        const setPrice = 9;
+        const itemName = 'car';
+        const setPrice = 5000;
         // Add the jackfruit and its price to the items mapping
         await instance.addItem(itemName, setPrice, { from: manager }); 
         // Create a store receipt and get the transaction receipt
@@ -267,21 +258,22 @@ contract('CashRegister', async(accounts) => {
         const contractBalanceBeforeTransfer = await instance.viewContractBalance.call({from: manager }); 
         // Get the managers token balance before token transfer from contract to manager
         const managerBalanceBeforeTransfer = await token.balanceOf.call(manager);
+        console.log('manager balance before transfer = ' + managerBalanceBeforeTransfer);
         // Transfer token balance of contract to manager
         await instance.claimTokens({ from: manager })
         // Get contract token balance after token transfer from contract to manager
         const contractBalanceAfterTransfer = await instance.viewContractBalance.call({from: manager });
         // Get managers token balance after token transfer from contract to manager
         const managerBalanceAfterTransfer = await token.balanceOf.call(manager);
+        console.log('manager balance after transfer = ' + managerBalanceAfterTransfer)
         // Calculate amount of tokens debited from the contract
         const tokensDebitedFromContract = contractBalanceBeforeTransfer.toNumber() - contractBalanceAfterTransfer.toNumber();
         // Calculate amount of tokens credited to the manager
-        const tokensCreditedToManager = managerBalanceBeforeTransfer.toNumber() + managerBalanceAfterTransfer.toNumber();
-
-        console.log(tokensDebitedFromContract);
-
-        console.log(tokensCreditedToManager);
-
+        console.log('manager balance after transer as a num = ' + managerBalanceAfterTransfer.toNumber());
+        console.log('manager balance before transer as a num = ' + managerBalanceBeforeTransfer.toNumber());
+        const tokensCreditedToManager = managerBalanceAfterTransfer.toNumber() - managerBalanceBeforeTransfer.toNumber();
+        console.log('tokens credited to the manager balance = ' + tokensCreditedToManager);
+        
         assert.strictEqual(tokensDebitedFromContract, tokensCreditedToManager, 'number of tokens debited from the contract is not the same as number of tokens credited to the manager')
     })
     
@@ -297,6 +289,4 @@ contract('CashRegister', async(accounts) => {
 
         assert(false, 'allows the purchaser to debit tokens from the contract to the manager')
     })
-    
-
 });

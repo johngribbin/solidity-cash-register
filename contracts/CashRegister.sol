@@ -8,31 +8,37 @@ contract CashRegister {
     // EVENTS
     // ------
 
-    // An event which will be emitted by the newReceipt function and contain key/value pairs named _purchaser (of type address) and _receiptID (of type uint)
+    // Event emitted by 'newReceipt' function 
     event NewReceipt(
         address indexed _purchaser,
         uint indexed _receiptID
     );
 
+    /* Event emitted by 'ringUpItem' function
+    event NewItemRungUp(
+        uint indexed _receiptID,
+        string indexed _itemName,
+        uint indexed _totalPrice
+    );
+    */
+
     // Owner of the physical 'store' that will utilize the cash register contract
     address public owner;
-    // mapping of items in the stores inventory which receives itemName (of type 'bytes32' - as strings cannot be used as keys in a mapping) as an argument 
-    // and returns the price of the item (of type 'uint')
+    // mapping of items in the stores inventory which maps itemName (of type 'bytes32' - as strings cannot be used as keys in a mapping) to price (of type 'uint')
     mapping(bytes32 => uint) public items; 
-    // mapping of individual receipts which accepts receiptID (of type uint) as an argument and returns the receipt (of type 'struct')
+    // mapping of individual receipts which maps receiptID (of type uint) to a receipt (of type 'struct')
     mapping(uint => Receipt) public receipts;
     // receiptNonce is incremented by newReceipt function and used to assign a unique receiptID to each receipt created
     uint receiptNonce;
-    // Each individual receipt is of type 'struct' has keys of 'purchaser' (of type 'address'), 'receiptID (of type 'uint'), totalPrice (of type 'uint') 
-    // and finished (of type 'boolean')
+    // Each individual receipt is of type 'struct' 
     struct Receipt {
         address purchaser;
-        uint receiptID;
+        uint receiptID; // redundant
         uint totalPrice;
         bool finished;
     }
 
-    // Global variable 'token'
+    // Global variable 'token' of type EIP20Interface
     EIP20Interface public token; 
 
     constructor(address _token) public {
@@ -54,7 +60,8 @@ contract CashRegister {
         // When a key has a value of 0 in a mapping, solidity will assume the items doesn't exist as 0 will return from the mapping as false 
         require(_itemPrice > 0, "itemPrice must be more than 0"); 
         // Adding the item to the items mapping
-        // The _itemName is the key and the _itemPrice is the value 
+        // The _itemName is the key and the _itemPrice is the value  
+        // keccak256 is a hanshing function 
         items[keccak256(abi.encodePacked(_itemName))] = _itemPrice;
     }
 
@@ -81,7 +88,8 @@ contract CashRegister {
         require(r.finished == false, "only receipts that are not deemed to be finished can be updated");
         // Update the value of the totalPrice key on the receipt by pulling the price of the item from the items mapping 
         r.totalPrice += items[keccak256(abi.encodePacked(_itemName))];
-        // EMIT AN EVENT WITH THE ITEM DETAILS - THE RECEIPT ID, THE ITEM NAME, THE PURCHASER ETC
+        // Emit a NewItemRungUp event that contains purchasers address, receipt ID, the item just added, the item price, and the new total price of the receipt
+        // emit NewItemRungUp(_receiptID, _itemName, r.totalPrice);
     }
 
     // A read only public function that returns the total price of all items rung up in a given receipt, and the purchasers address
@@ -106,9 +114,10 @@ contract CashRegister {
     function viewContractBalance() public view restricted returns (uint tokenBalanceOfContract) {
         return token.balanceOf(this);
     }
+
     // Used by the owner to claim tokens 
     function claimTokens() public restricted {
         // transfer full balance of tokens in CashRegister contract to managers address 
-        require(token.transferFrom(this, owner, token.balanceOf(this)), "full token balance of contract did not transfer to owner");
+        require(token.transfer(msg.sender, token.balanceOf(this)), "transfer of cash register tokens to manager did not complete");
     }
 } 
