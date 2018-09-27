@@ -121,3 +121,8 @@ contract CashRegister {
         require(token.transfer(msg.sender, token.balanceOf(this)), "transfer of cash register tokens to manager did not complete");
     }
 } 
+
+// To Do
+// add the event that isaac suggested
+// remove 'receiptId' from the recipt struct - we dont need it as we cant get the receipt without the receipt ID
+// dont do any hashing of strings insdie the contract functions, do those off chain to save gas
