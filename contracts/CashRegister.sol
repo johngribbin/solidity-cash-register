@@ -33,7 +33,7 @@ contract CashRegister {
     // Each individual receipt is of type 'struct' 
     struct Receipt {
         address purchaser;
-        uint receiptID; // redundant
+        uint receiptID; // possibly redundant?
         uint totalPrice;
         bool finished;
     }
@@ -123,6 +123,7 @@ contract CashRegister {
 } 
 
 // To Do
+// update functions with the correct comments r.e. types
 // add the event that isaac suggested
 // remove 'receiptId' from the recipt struct - we dont need it as we cant get the receipt without the receipt ID
 // dont do any hashing of strings insdie the contract functions, do those off chain to save gas

@@ -217,9 +217,9 @@ contract('CashRegister', async(accounts) => {
         // Get contracts token balance after receipt is finalized
         const contractBalanceAfterTransfer = await instance.viewContractBalance.call({ from: manager });
         // Calculate amount of tokens debited from the purchaser
-        const tokensDebitedFromPurchaser = purchaserBalanceBeforeTransfer.toNumber() - purchaserBalanceAfterTransfer.toNumber();
+        const tokensDebitedFromPurchaser = purchaserBalanceBeforeTransfer.sub(purchaserBalanceAfterTransfer).toString();
         // Calculate amount of tokens credited to the Contract
-        const tokensCreditedToContract = contractBalanceBeforeTransfer.toNumber() + contractBalanceAfterTransfer.toNumber();
+        const tokensCreditedToContract = contractBalanceBeforeTransfer.add(contractBalanceAfterTransfer).toString();
         
         assert.strictEqual(tokensDebitedFromPurchaser, tokensCreditedToContract, "number of tokens debited from from the purchaser is not the same as the number of tokens credited to the contract");
     })
